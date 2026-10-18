@@ -1,0 +1,103 @@
+<!DOCTYPE html><html><head><base target="_blank"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Buscador de alumnos · Gauss</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f3f5f9;color:#222;font-size:15px}
+header{background:#1f4e79;color:#fff;padding:14px 16px;position:sticky;top:0;z-index:5}
+header h1{margin:0 0 10px;font-size:19px}
+#q{width:100%;font-size:17px;padding:11px 12px;border:0;border-radius:8px}
+#res{background:#fff;border-radius:8px;margin-top:6px;max-height:60vh;overflow:auto;display:none;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+#res div{padding:11px 12px;border-bottom:1px solid #eee;color:#222;cursor:pointer}
+#res div:active,#res div:hover{background:#e8f0fe}
+#res small{color:#777}
+main{padding:12px 16px 40px;max-width:820px;margin:0 auto}
+.card{background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h2{margin:0 0 8px;font-size:15px;color:#1f4e79}
+.nom{font-size:21px;font-weight:bold;margin:0}
+.sub{color:#555;margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.k{background:#f3f5f9;border-radius:8px;padding:8px}
+.k b{display:block;font-size:19px;margin-top:2px}
+.k span{font-size:11px;color:#666;text-transform:uppercase}
+.fila{display:flex;gap:6px;padding:4px 0;border-bottom:1px solid #f0f0f0}
+.fila span{color:#666;min-width:130px;font-size:13px}
+.sem{font-size:30px}
+.r{background:#f4cccc}.y{background:#fff2cc}.g{background:#d9ead3}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#d9e2f3;text-align:left;padding:5px}
+td{padding:5px;border-bottom:1px solid #eee;vertical-align:top}
+.wa{display:inline-block;background:#25d366;color:#fff;text-decoration:none;padding:7px 12px;border-radius:18px;margin:6px 6px 0 0;font-weight:bold;font-size:13px}
+.vacio{color:#999;font-style:italic}
+#msg{color:#666;text-align:center;margin-top:30px}
+</style></head><body>
+<header><h1>🔎 Buscador de alumnos · Gauss</h1>
+<input id="q" placeholder="Escribí nombre o apellido…" autocomplete="off" oninput="filtrar()">
+<div id="res"></div></header>
+<main><div id="ficha"></div><div id="msg">Cargando alumnos…</div></main>
+<script>
+var LISTA=[];
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function sinTilde(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+var API='https://script.google.com/macros/s/AKfycbxkJKfreWnlk8OZjS18maXcKNO4UblFEiaOwcBpe2VZYm5fs3CmlKEjwNqETak_ObJa/exec';function pedir(a,id,ok,mal){fetch(API+'?accion='+a+'&id='+encodeURIComponent(id),{credentials:'omit'}).then(function(r){return r.json();}).then(function(d){if(d&&d.error)mal({message:d.error});else ok(d);}).catch(function(){mal({message:'No pude conectar con el CSA. Revisá tu conexión y recargá.'});});}
+pedir('lista','',function(l){LISTA=l;document.getElementById('msg').textContent=l.length+' alumnos. Escribí arriba para buscar.';document.getElementById('q').focus();},
+ function(e){document.getElementById('msg').textContent='⚠️ '+e.message;});
+function filtrar(){
+ var q=sinTilde(document.getElementById('q').value.trim()),r=document.getElementById('res');
+ if(q.length<2){r.style.display='none';return;}
+ var p=q.split(/\s+/),h=LISTA.filter(function(x){var t=sinTilde(x[0]+' '+x[2]);return p.every(function(w){return t.indexOf(w)>=0;});}).slice(0,30);
+ r.innerHTML=h.length?h.map(function(x){return '<div onclick="ver(\''+esc(x[1])+'\')">'+esc(x[4])+' '+esc(x[0])+'<br><small>'+esc(x[2])+' · '+esc(x[3])+'</small></div>';}).join(''):'<div class="vacio">No hay coincidencias</div>';
+ r.style.display='block';
+}
+function ver(id){
+ document.getElementById('res').style.display='none';document.getElementById('q').blur();
+ document.getElementById('ficha').innerHTML='';document.getElementById('msg').textContent='Cargando ficha…';
+ pedir('ficha',id,pintar,function(e){document.getElementById('msg').textContent='⚠️ '+e.message;});
+}
+function k(t,v,cl){return '<div class="k '+(cl||'')+'"><span>'+esc(t)+'</span><b>'+esc(v===''?'–':v)+'</b></div>';}
+function f(t,v){return v===''||v==null?'':'<div class="fila"><span>'+esc(t)+'</span><div>'+esc(v)+'</div></div>';}
+function pct(v){var n=parseFloat(v);return isNaN(n)?'':(n<70?'r':(n<85?'y':'g'));}
+function tabla(tit,enc,filas,colNota,D){
+ var h='<div class="card"><h2>'+tit+'</h2>';
+ if(!filas.length)return h+'<div class="vacio">— sin registros —</div></div>';
+ h+='<div style="overflow-x:auto"><table><tr>'+enc.map(function(e){return '<th>'+esc(e)+'</th>';}).join('')+'</tr>';
+ filas.forEach(function(r){h+='<tr>'+r.map(function(c,i){var cl='';
+  if(i===colNota&&c!==''){cl=c<D.notaBaja?'r':(c<D.notaMedia?'y':'g');c=Math.round(c);}
+  if(enc[i]==='RESULTADO'){var s=String(c);cl=s==='Presente'?'g':(s==='Ausente'?'r':(s==='Justificado'?'y':(/tard|retir/i.test(s)?'y':'')));}
+  return '<td class="'+cl+'">'+esc(c)+'</td>';}).join('')+'</tr>';});
+ return h+'</table></div></div>';
+}
+function pintar(D){
+ var a=D.a;document.getElementById('msg').textContent='';
+ var nom=String(a['ALUMNO']).split(' · ').pop();
+ var sc=a['🚦']==='🔴'?'r':(a['🚦']==='🟡'?'y':(a['🚦']==='🟢'?'g':''));
+ var h='<div class="card '+sc+'"><div style="display:flex;gap:12px;align-items:center"><div class="sem">'+esc(a['🚦']||'')+'</div><div><p class="nom">'+esc(nom)+'</p>'+
+  '<div class="sub">'+esc(a['GRUPO'])+' · '+esc(a['MODALIDAD'])+' · '+esc(a['ESTADO'])+'</div></div></div>'+
+  (a['MOTIVOS']?'<div style="margin-top:8px"><b>Motivos:</b> '+esc(a['MOTIVOS'])+'</div>':'')+
+  (a['ALERTA']?'<div><b>Alerta:</b> '+esc(a['ALERTA'])+'</div>':'')+
+  (a['SEGUIMIENTO']?'<div><b>Seguimiento:</b> '+esc(a['SEGUIMIENTO'])+'</div>':'')+'</div>';
+ h+='<div class="card"><h2>📇 Datos</h2>'+f('ID',a['ID'])+f('Prof. encargado',a['PROF. ENCARGADO'])+f('Historial de grupos',a['HISTORIAL DE GRUPOS'])+
+  f('Celular',a['CELULAR'])+f('Responsable',a['RESPONSABLE'])+f('Cel. responsable',a['CEL. RESPONSABLE'])+
+  (a['WA ALUMNO']?'<a class="wa" href="'+esc(a['WA ALUMNO'])+'">📲 WhatsApp alumno</a>':'')+
+  (a['WA RESPONSABLE']?'<a class="wa" href="'+esc(a['WA RESPONSABLE'])+'">📲 WhatsApp responsable</a>':'')+'</div>';
+ h+='<div class="card"><h2>📅 Asistencia</h2><div class="grid">'+
+  k('Total',a['% ASIST. TOTAL'],pct(a['% ASIST. TOTAL']))+k('Últimos 7 días',a['% ÚLTIMOS 7 DÍAS'],pct(a['% ÚLTIMOS 7 DÍAS']))+
+  k('Últimos 15 días',a['% ÚLTIMOS 15 DÍAS'],pct(a['% ÚLTIMOS 15 DÍAS']))+k('Últimos 30 días',a['% ÚLTIMOS 30 DÍAS'],pct(a['% ÚLTIMOS 30 DÍAS']))+
+  k('Faltas esta semana',a['FALTAS ESTA SEMANA'])+k('Tardes (30 días)',a['TARDES 30 DÍAS'])+k('Retiros (30 días)',a['RETIROS 30 DÍAS'])+
+  k('Última ausencia',a['ÚLTIMA AUSENCIA'])+'</div>'+
+  '<div class="sub" style="margin-top:8px;font-size:13px">Turnos: '+esc(a['TURNOS'])+' · Presente '+esc(a['PRESENTE'])+' · Tarde '+esc(a['LLEGÓ TARDE'])+
+  ' · Se retiró '+esc(a['SE RETIRÓ'])+' · Justificado '+esc(a['JUSTIFICADO'])+' · Ausente '+esc(a['AUSENTE'])+'</div></div>';
+ var deu=parseFloat(a['DEUDA'])||0;
+ h+='<div class="card"><h2>📝 Exámenes y 💰 pagos</h2><div class="grid">'+
+  k('Promedio exámenes',a['PROMEDIO EXÁMENES']===''?'':Math.round(a['PROMEDIO EXÁMENES']))+k('Tendencia',a['TENDENCIA'])+
+  k('Deuda vencida',deu?'Gs. '+deu.toLocaleString('es-PY'):'0',deu>0?'r':'g')+k('Pagos vencidos',a['PAGOS VENCIDOS'])+
+  k('Último contacto',a['ÚLTIMO CONTACTO'])+'</div></div>';
+ h+=tabla('📝 Últimos exámenes',['FECHA','EXAMEN','GRUPO','PUNTAJE','DE','NOTA'],D.examenes,5,D);
+ h+=tabla('📋 Últimas asistencias',['FECHA','TURNO','RESULTADO','GRUPO','DOCENTE'],D.asistencia,-1,D);
+ h+=tabla('🗒️ Observaciones',['FECHA','TIPO','DETALLE','RESULTADO','PRÓXIMO PASO','ANOTÓ'],D.obs,-1,D);
+ h+=tabla('✏️ Observaciones de los profes',['SEMANA','GRUPO','OBSERVACIÓN'],D.obsProfes,-1,D);
+ h+=tabla('📞 Contactos por alertas',['FECHA','A QUIÉN','MOTIVO','NOTA'],D.contactos,-1,D);
+ h+=tabla('🩺 Justificativos',['DESDE','HASTA','MOTIVO'],D.justif,-1,D);
+ h+='<div class="vacio" style="text-align:center;font-size:12px">Datos del CSA · se actualizan cada hora.</div>';
+ document.getElementById('ficha').innerHTML=h;window.scrollTo(0,0);
+}
+</script></body></html>
