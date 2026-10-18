@@ -38,9 +38,24 @@ td{padding:5px;border-bottom:1px solid #eee;vertical-align:top}
 var LISTA=[];
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function sinTilde(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
-var API='https://script.google.com/macros/s/AKfycbxkJKfreWnlk8OZjS18maXcKNO4UblFEiaOwcBpe2VZYm5fs3CmlKEjwNqETak_ObJa/exec';function pedir(a,id,ok,mal){fetch(API+'?accion='+a+'&id='+encodeURIComponent(id),{credentials:'omit'}).then(function(r){return r.json();}).then(function(d){if(d&&d.error)mal({message:d.error});else ok(d);}).catch(function(){mal({message:'No pude conectar con el CSA. Revisá tu conexión y recargá.'});});}
-pedir('lista','',function(l){LISTA=l;document.getElementById('msg').textContent=l.length+' alumnos. Escribí arriba para buscar.';document.getElementById('q').focus();},
- function(e){document.getElementById('msg').textContent='⚠️ '+e.message;});
+var PIN='';try{PIN=localStorage.getItem('gaussPin')||'';}catch(e){}
+var API='https://script.google.com/macros/s/AKfycbxkJKfreWnlk8OZjS18maXcKNO4UblFEiaOwcBpe2VZYm5fs3CmlKEjwNqETak_ObJa/exec';function pedir(a,id,ok,mal){fetch(API+'?accion='+a+'&id='+encodeURIComponent(id)+'&pin='+encodeURIComponent(PIN),{credentials:'omit'}).then(function(r){return r.json();}).then(function(d){if(d&&d.error)mal({message:d.error});else ok(d);}).catch(function(){mal({message:'No pude conectar con el CSA. Revisá tu conexión y recargá.'});});}
+function error(e){var m=String(e.message||e);
+ if(m.indexOf('PIN:')>=0){pedirPin(m.replace(/^.*PIN:\s*/,''));return;}
+ document.getElementById('msg').textContent='⚠️ '+m;}
+function pedirPin(m){
+ document.getElementById('ficha').innerHTML='<div class="card" style="text-align:center"><h2>🔒 Buscador privado</h2>'+
+  '<div style="margin-bottom:10px;color:'+(m.indexOf('Ingres')===0?'#555':'#c0392b')+'">'+esc(m)+'</div>'+
+  '<input id="pin" type="password" inputmode="numeric" placeholder="PIN" style="font-size:20px;padding:10px;width:160px;text-align:center;border:1px solid #ccc;border-radius:8px">'+
+  '<br><button onclick="entrar()" style="margin-top:12px;font-size:16px;padding:10px 28px;background:#1f4e79;color:#fff;border:0;border-radius:8px">Entrar</button></div>';
+ document.getElementById('msg').textContent='';
+ var i=document.getElementById('pin');i.focus();i.onkeydown=function(ev){if(ev.key==='Enter')entrar();};
+}
+function entrar(){PIN=document.getElementById('pin').value.trim();try{localStorage.setItem('gaussPin',PIN);}catch(e){}
+ document.getElementById('ficha').innerHTML='';cargar();}
+function cargar(){document.getElementById('msg').textContent='Cargando alumnos…';
+ pedir('lista','',function(l){LISTA=l;document.getElementById('msg').textContent=l.length+' alumnos. Escribí arriba para buscar.';document.getElementById('q').focus();},error);}
+cargar();
 function filtrar(){
  var q=sinTilde(document.getElementById('q').value.trim()),r=document.getElementById('res');
  if(q.length<2){r.style.display='none';return;}
@@ -51,7 +66,7 @@ function filtrar(){
 function ver(id){
  document.getElementById('res').style.display='none';document.getElementById('q').blur();
  document.getElementById('ficha').innerHTML='';document.getElementById('msg').textContent='Cargando ficha…';
- pedir('ficha',id,pintar,function(e){document.getElementById('msg').textContent='⚠️ '+e.message;});
+ pedir('ficha',id,pintar,error);
 }
 function k(t,v,cl){return '<div class="k '+(cl||'')+'"><span>'+esc(t)+'</span><b>'+esc(v===''?'–':v)+'</b></div>';}
 function f(t,v){return v===''||v==null?'':'<div class="fila"><span>'+esc(t)+'</span><div>'+esc(v)+'</div></div>';}
