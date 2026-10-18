@@ -1,2 +1,2 @@
 # buscador
-Buscador de alumnos Gauss
+Buscador de alumnos
