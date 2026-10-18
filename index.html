@@ -39,7 +39,17 @@ var LISTA=[];
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function sinTilde(s){return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
 var PIN='';try{PIN=localStorage.getItem('gaussPin')||'';}catch(e){}
-var API='https://script.google.com/macros/s/AKfycbxkJKfreWnlk8OZjS18maXcKNO4UblFEiaOwcBpe2VZYm5fs3CmlKEjwNqETak_ObJa/exec';function pedir(a,id,ok,mal){fetch(API+'?accion='+a+'&id='+encodeURIComponent(id)+'&pin='+encodeURIComponent(PIN),{credentials:'omit'}).then(function(r){return r.json();}).then(function(d){if(d&&d.error)mal({message:d.error});else ok(d);}).catch(function(){mal({message:'No pude conectar con el CSA. Revisá tu conexión y recargá.'});});}
+function informe(id){var b=document.getElementById('bInf'),r=document.getElementById('resInf');
+ b.disabled=true;b.textContent='Generando… (unos segundos)';r.innerHTML='';
+ pedir('informe',id,function(x){b.disabled=false;b.textContent='Generar PDF';
+  r.innerHTML='✅ Listo: '+esc(x.nombre)+'<br><a class="wa" style="background:#1f4e79" href="'+esc(x.ver)+'">👁️ Ver PDF</a>'+
+   '<a class="wa" style="background:#555" href="'+esc(x.bajar)+'">⬇️ Descargar</a>'+
+   (x.wa?'<a class="wa" href="'+esc(x.wa)+'">📲 WhatsApp responsable</a>':'<div class="vacio">Sin celular del responsable cargado.</div>')+
+   '<div class="vacio" style="font-size:12px;margin-top:6px">Descargá el PDF y adjuntalo en el chat que se abre.</div>';},
+  function(e){b.disabled=false;b.textContent='Generar PDF';var m=String(e.message||e);
+   if(m.indexOf('PIN:')>=0){error(e);return;}r.innerHTML='<span style="color:#c0392b">⚠️ '+esc(m)+'</span>';},
+  {comentario:document.getElementById('com').value});}
+var API='https://script.google.com/macros/s/AKfycbxkJKfreWnlk8OZjS18maXcKNO4UblFEiaOwcBpe2VZYm5fs3CmlKEjwNqETak_ObJa/exec';function pedir(a,id,ok,mal,x){x=x||{};var q='';for(var k in x)q+='&'+k+'='+encodeURIComponent(x[k]);fetch(API+'?accion='+a+'&id='+encodeURIComponent(id)+'&pin='+encodeURIComponent(PIN)+q,{credentials:'omit'}).then(function(r){return r.json();}).then(function(d){if(d&&d.error)mal({message:d.error});else ok(d);}).catch(function(){mal({message:'No pude conectar con el CSA. Revisá tu conexión y recargá.'});});}
 function error(e){var m=String(e.message||e);
  if(m.indexOf('PIN:')>=0){pedirPin(m.replace(/^.*PIN:\s*/,''));return;}
  document.getElementById('msg').textContent='⚠️ '+m;}
@@ -112,6 +122,11 @@ function pintar(D){
  h+=tabla('✏️ Observaciones de los profes',['SEMANA','GRUPO','OBSERVACIÓN'],D.obsProfes,-1,D);
  h+=tabla('📞 Contactos por alertas',['FECHA','A QUIÉN','MOTIVO','NOTA'],D.contactos,-1,D);
  h+=tabla('🩺 Justificativos',['DESDE','HASTA','MOTIVO'],D.justif,-1,D);
+ h+='<div class="card"><h2>📄 Informe para padres (PDF)</h2>'+
+  '<div class="sub" style="font-size:13px;margin-bottom:6px">Arma el mismo PDF que el menú del CSA y lo deja listo para mandar.</div>'+
+  '<textarea id="com" rows="3" placeholder="Comentario del encargado (opcional)" style="width:100%;font-size:15px;padding:8px;border:1px solid #ccc;border-radius:8px"></textarea>'+
+  '<div style="margin-top:8px"><button id="bInf" onclick="informe(\''+esc(a['ID'])+'\')" style="font-size:15px;padding:10px 16px;background:#c0392b;color:#fff;border:0;border-radius:8px">Generar PDF</button></div>'+
+  '<div id="resInf" style="margin-top:10px"></div></div>';
  h+='<div class="vacio" style="text-align:center;font-size:12px">Datos del CSA · se actualizan cada hora.</div>';
  document.getElementById('ficha').innerHTML=h;window.scrollTo(0,0);
 }
