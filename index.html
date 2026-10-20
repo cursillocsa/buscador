@@ -121,7 +121,7 @@ function pintar(D){
  h+=tabla('🗒️ Observaciones',['FECHA','TIPO','DETALLE','RESULTADO','PRÓXIMO PASO','ANOTÓ'],D.obs,-1,D);
  h+=tabla('✏️ Observaciones de los profes',['SEMANA','GRUPO','OBSERVACIÓN'],D.obsProfes,-1,D);
  h+=tabla('📞 Contactos por alertas',['FECHA','A QUIÉN','MOTIVO','NOTA'],D.contactos,-1,D);
- h+=tabla('🩺 Justificativos',['DESDE','HASTA','MOTIVO'],D.justif,-1,D);
+ h+=tabla('🩺 Justificativos',['DESDE','HASTA','MOTIVO','QUIÉN','A QUIÉN'],D.justif,-1,D);
  h+='<div class="card"><h2>📄 Informe para padres (PDF)</h2>'+
   '<div class="sub" style="font-size:13px;margin-bottom:6px">Arma el mismo PDF que el menú del CSA y lo deja listo para mandar.</div>'+
   '<textarea id="com" rows="3" placeholder="Comentario del encargado (opcional)" style="width:100%;font-size:15px;padding:8px;border:1px solid #ccc;border-radius:8px"></textarea>'+
