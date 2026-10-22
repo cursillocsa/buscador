@@ -59,7 +59,7 @@ tr.clic{cursor:pointer}tr.clic:hover td{background:#e8f0fe}
 var API_CSA='https://script.google.com/macros/s/AKfycbxkJKfreWnlk8OZjS18maXcKNO4UblFEiaOwcBpe2VZYm5fs3CmlKEjwNqETak_ObJa/exec';   // ← el link de la aplicación web del CSA (termina en /exec)
 var API_ADM='https://script.google.com/macros/s/AKfycbzPNqOlPMgP1lme__szBCxU4kzz7fSJ3PxLxUZu_CcywI5ftsESe6e7hL63z1Xp7M6U/exec';
 
-var PIN='';try{PIN=localStorage.getItem('gaussPinCSA')||'';}catch(e){}
+var PIN='';try{PIN=localStorage.getItem('gaussPinCSA')||localStorage.getItem('gaussPin')||'';}catch(e){}
 var LISTA=[],FC=null,FI=null,FB=null,PICK=null,PICK_CB=null,ACTUAL=null;
 function el(i){return document.getElementById(i);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -108,7 +108,8 @@ function botonPerfil(){return ACTUAL?'<button class="btn az" onclick="perfil(\''
 function inicio(){el('volver').style.display='none';msg('');window.scrollTo(0,0);ACTUAL=null;
  el('app').innerHTML='<div class="botones">'+
   '<button class="bgrande" style="background:#1f4e79" onclick="buscarPerfil()">👤 Perfil del alumno<small>Asistencia, notas, seguimiento · informe para padres</small></button>'+
-  '<button class="bgrande" style="background:#00838f" onclick="listaGrupo()">📋 Lista de un grupo<small>Todos los alumnos del grupo con su semáforo</small></button>'+
+  '<button class="bgrande" style="background:#00838f" onclick="listaGrupo()">📊 Resumen de grupo<small>Semáforo, asistencia, notas y deuda de cada alumno</small></button>'+
+  '<button class="bgrande" style="background:#c0392b" onclick="pdfNotas()">🖨️ PDF de notas<small>Notas de un grupo: un examen o todos</small></button>'+
   '<button class="bgrande" style="background:#2e7d32" onclick="justificativo()">🩺 Justificativo<small>Cuando avisan que faltó o va a faltar</small></button>'+
   '<button class="bgrande" style="background:#ad1457" onclick="observacion()">📝 Anotar observación<small>Seguimiento, conducta, citación, algo positivo…</small></button>'+
   '<button class="bgrande" style="background:#e65100" onclick="contacto()">📞 Registrar contacto<small>Hablé con el alumno o con su familia</small></button>'+
@@ -214,7 +215,7 @@ function asistencia(id){var a=alumno(id);if(a)ACTUAL=a;pantalla('');msg('Cargand
 
 // ---------- 📋 LISTA DE UN GRUPO ----------
 function listaGrupo(){conFC(function(){
- pantalla('<div class="card"><h2>📋 Lista de un grupo</h2><select id="lg" onchange="verGrupo()"><option value="">Elegí el grupo…</option>'+
+ pantalla('<div class="card"><h2>📊 Resumen de grupo</h2><select id="lg" onchange="verGrupo()"><option value="">Elegí el grupo…</option>'+
   FC.grupos.map(function(g){return '<option'+(g===guardado('gaussCsaGrupo')?' selected':'')+'>'+esc(g)+'</option>';}).join('')+'</select></div><div id="lgT"></div>');
  if(el('lg').value)verGrupo();});}
 function verGrupo(){var g=el('lg').value,t=el('lgT');if(!g){t.innerHTML='';return;}guardado('gaussCsaGrupo',g);
@@ -230,6 +231,33 @@ function verGrupo(){var g=el('lg').value,t=el('lgT');if(!g){t.innerHTML='';retur
     '<td class="'+(x.prom===''?'':(x.prom<D.notaBaja?'r':(x.prom<D.notaMedia?'y':'g')))+'">'+(x.prom===''?'–':x.prom)+'</td>'+
     '<td class="'+(x.deuda>0?'r':'')+'">'+(x.deuda>0?gs(x.deuda):'–')+'</td></tr>';}).join('')+'</table></div></div>';},
   function(e){falla(e,'lgT');});}
+
+// ---------- 🖨️ PDF DE NOTAS ----------
+var PN=null;
+function pdfNotas(){var seguir=function(){
+ pantalla('<div class="card"><h2>🖨️ PDF de notas de un grupo</h2>'+
+  '<label>Planilla</label><select id="nP" onchange="nGrupos()">'+PN.map(function(p,i){return '<option value="'+i+'">'+esc(p.nombre)+'</option>';}).join('')+'</select>'+
+  '<label>Grupo</label><select id="nG" onchange="nExs()"></select>'+
+  '<label>¿Qué exámenes?</label><select id="nM" onchange="nExs()"><option value="uno">Solo un examen</option><option value="todos">Todos los exámenes del grupo</option></select>'+
+  '<div id="nEw"><label>Examen</label><select id="nE"></select></div>'+
+  '<button class="btn" id="nB" onclick="nGenerar()">🖨️ Generar PDF</button><div id="nR" style="margin-top:10px"></div></div>');
+ var g=guardado('gaussCsaNotas').split('|');if(g[0]&&PN[g[0]])el('nP').value=g[0];nGrupos();if(g[1]&&el('nG').options[g[1]])el('nG').value=g[1];nExs();};
+ if(PN)seguir();else{msg('Cargando planillas de notas… (puede tardar unos segundos)');
+  pedir('notasDatos',{},function(d){PN=d;msg('');seguir();},function(e){falla(e);});}}
+function nGrupos(){var p=PN[el('nP').value];el('nG').innerHTML=p.grupos.map(function(g,i){return '<option value="'+i+'">'+esc(g.nombre)+(g.ex.length?'':' (sin notas)')+'</option>';}).join('');nExs();}
+function nExs(){var g=PN[el('nP').value].grupos[el('nG').value],todos=el('nM').value==='todos';el('nR').innerHTML='';
+ el('nEw').style.display=todos?'none':'block';
+ el('nE').innerHTML=g&&g.ex.length?g.ex.slice().reverse().map(function(e){return '<option value="'+e.col+'">'+esc(e.texto)+'</option>';}).join(''):'<option value="">— sin notas cargadas —</option>';}
+function nGenerar(){var p=PN[el('nP').value],g=p.grupos[el('nG').value],r=el('nR');
+ if(!g||!g.ex.length){r.innerHTML='<div class="err">Ese grupo todavía no tiene notas cargadas.</div>';return;}
+ var cols=el('nM').value==='todos'?g.ex.map(function(e){return e.col;}):[el('nE').value];
+ guardado('gaussCsaNotas',el('nP').value+'|'+el('nG').value);
+ var b=el('nB');b.disabled=true;b.textContent='Generando… (unos segundos)';r.innerHTML='';
+ pedir('pdfNotas',{archivo:p.id,hoja:g.nombre,cols:cols.join(',')},function(x){b.disabled=false;b.textContent='🖨️ Generar PDF';
+  r.innerHTML='✅ '+esc(x.nombre)+'<br><a class="wa" style="background:#1f4e79" href="'+esc(x.ver)+'" target="_blank">👁️ Ver PDF</a>'+
+   '<a class="wa" style="background:#555" href="'+esc(x.bajar)+'" target="_blank">⬇️ Descargar</a>'+
+   '<div class="ayuda" style="margin-top:6px">Queda guardado en la carpeta PDF NOTAS, al lado de la planilla de notas.</div>';},
+  function(e){b.disabled=false;b.textContent='🖨️ Generar PDF';falla(e,'nR');});}
 
 // ---------- opciones ----------
 function op(l,sel){return '<option value=""></option>'+(l||[]).map(function(x){return '<option'+(x===sel?' selected':'')+'>'+esc(x)+'</option>';}).join('');}
